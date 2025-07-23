@@ -1,5 +1,162 @@
 <!DOCTYPE html>
-<!-- vollständiger HTML-Inhalt wie vom Benutzer geliefert, inkl. CSS, JS, Fragenarray usw. -->
-<!-- (aus Platzgründen hier nicht nochmal eingefügt – im tatsächlichen Dateisystem enthalten) -->
-<!-- Bitte vorherige lange HTML-Zusammenstellung an dieser Stelle als Inhalt verwenden -->
-<!-- Diese Datei ist getestet, vollständig und bereit zum Hochladen in GitHub -->
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Audit Checkliste – Q-Prüfer Lengsfeld</title>
+  <meta name="theme-color" content="#003366">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; background: white; }
+    th, td { border: 1px solid #999; padding: 10px; vertical-align: top; }
+    th { background: #ccc; }
+    select { width: 100%; padding: 5px; }
+    .comment div { min-height: 100px; border: 1px solid #ccc; padding: 5px; }
+    .ampel-0 { background-color: #ff6666 !important; }
+    .ampel-1 { background-color: #ffcc66 !important; }
+    .ampel-2 { background-color: #66cc66 !important; }
+    .summary, .signature { background: white; padding: 15px; margin-top: 30px; border: 1px solid #ccc; }
+    .signature-fields { display: flex; justify-content: space-around; margin-top: 50px; }
+    .signature-line { border-top: 1px solid black; margin-top: 40px; }
+    .button-container { text-align: center; margin: 20px; }
+  </style>
+</head>
+<body>
+  <div id="audit-content">
+    <header>
+      <h1>Audit Checkliste – Q-Prüfer Lengsfeld</h1>
+      <div class="date-stamp" id="dateStamp"></div>
+    </header>
+
+    <div class="button-container">
+      <button onclick="generatePDF()">📄 PDF erstellen</button>
+    </div>
+
+    <div id="auditBody"></div>
+
+    <div class="summary">
+      <h2>Auswertung</h2>
+      <p><strong>Gesamtpunktzahl:</strong> <span id="score">0</span></p>
+      <p><strong>Anzahl 0 (Rot):</strong> <span id="count0">0</span></p>
+      <p><strong>Anzahl 1 (Gelb):</strong> <span id="count1">0</span></p>
+      <p><strong>Anzahl 2 (Grün):</strong> <span id="count2">0</span></p>
+    </div>
+
+    <div class="signature">
+      <h2>Unterschriften</h2>
+      <div class="signature-fields">
+        <div><div class="signature-line"></div><div>Prüfer(in)</div></div>
+        <div><div class="signature-line"></div><div>Bereichsverantwortliche(r)</div></div>
+        <div><div class="signature-line"></div><div>Ort / Datum</div></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fragen = [
+      ["Dokumentation", "Sind die Arbeitsanweisungen vollständig, aktuell, verständlich und an der Linie verfügbar?"],
+      ["Prozessüberwachung", "Werden Maschinenparameter gemäß Freigabeunterlagen dokumentiert?"],
+      ["Prozessüberwachung", "Werden relevante Prozessparameter überwacht und ausgewertet?"],
+      ["Prozessüberwachung", "Gibt es definierte Toleranzgrenzen und Reaktionen?"],
+      ["Rüstprozess", "Ist der Rüstvorgang standardisiert?"],
+      ["Rüstprozess", "Erfolgt eine Freigabe durch geschultes Fachpersonal?"],
+      ["Rüstprozess", "Ist ein strukturierter Anlaufprozess vorhanden?"],
+      ["Qualität", "Werden Referenzteile oder Prüfanweisungen eingesetzt?"],
+      ["Qualität", "Sind Prüfanweisungen aktuell und verfügbar?"],
+      ["Qualität", "Ist Rückverfolgbarkeit gewährleistet?"],
+      ["Qualität", "Werden qualitätsrelevante Daten dokumentiert?"],
+      ["SPC", "Wird SPC eingesetzt?"],
+      ["SPC", "Gibt es Reaktionspläne bei Ausreißern?"],
+      ["SPC", "Werden Daten zur Verbesserung genutzt?"],
+      ["Fehlererkennung", "Werden fehlerhafte Produkte gesperrt und dokumentiert?"],
+      ["Fehlererkennung", "Gibt es Regelungen für Nacharbeit und Ausschuss?"],
+      ["Störungen", "Sind Maßnahmen bei Störungen dokumentiert?"],
+      ["Störungen", "Gibt es eine Eskalationskette?"],
+      ["Personal", "Ist das Personal geschult und qualifiziert?"],
+      ["Personal", "Gibt es Nachweise für Schulungen?"],
+      ["Personal", "Werden Schulungsbedarfe erfasst?"],
+      ["Kundenanforderungen", "Werden Kundenanforderungen verstanden und umgesetzt?"],
+      ["Kundenanforderungen", "Gibt es eine Prüfung bei Auftragsstart?"],
+      ["Material", "Wird nur freigegebenes Material verwendet?"],
+      ["Material", "Ist Lagerung/Transport entsprechend organisiert?"],
+      ["Prüfmittel", "Sind Prüfmittel kalibriert und gekennzeichnet?"],
+      ["Prüfmittel", "Werden nur gültig kalibrierte Prüfmittel verwendet?"],
+      ["5S", "Ist der Arbeitsplatz ordentlich und ergonomisch?"],
+      ["5S", "Werden 5S-Prinzipien eingehalten?"]
+    ];
+
+    function buildTable() {
+      const auditBody = document.getElementById("auditBody");
+      fragen.forEach(([kategorie, frage]) => {
+        const table = document.createElement("table");
+        table.innerHTML = `
+          <thead><tr>
+            <th>Kategorie</th><th>Frage</th>
+            <th>Bewertung</th><th>Kommentar</th>
+          </tr></thead>
+          <tbody><tr>
+            <td>${kategorie}</td>
+            <td>${frage}</td>
+            <td>
+              <select>
+                <option value="0">0 – Nicht erfüllt</option>
+                <option value="1">1 – Teilweise erfüllt</option>
+                <option value="2">2 – Voll erfüllt</option>
+              </select>
+            </td>
+            <td class="comment"><div contenteditable="true"></div></td>
+          </tr></tbody>`;
+        auditBody.appendChild(table);
+      });
+      document.querySelectorAll("select").forEach(s => s.addEventListener("change", updateScore));
+    }
+
+    function updateScore() {
+      const selects = document.querySelectorAll("select");
+      let sum = 0, c0 = 0, c1 = 0, c2 = 0;
+      selects.forEach(s => {
+        const val = s.value;
+        sum += +val;
+        if(val === "0") c0++;
+        else if(val === "1") c1++;
+        else if(val === "2") c2++;
+        s.classList.remove("ampel-0","ampel-1","ampel-2");
+        if(val === "0") s.classList.add("ampel-0");
+        else if(val === "1") s.classList.add("ampel-1");
+        else if(val === "2") s.classList.add("ampel-2");
+      });
+      document.getElementById("score").textContent = sum;
+      document.getElementById("count0").textContent = c0;
+      document.getElementById("count1").textContent = c1;
+      document.getElementById("count2").textContent = c2;
+    }
+
+    function generatePDF() {
+      const now = new Date();
+      document.getElementById("dateStamp").textContent = "Erstellt am: " + now.toLocaleDateString("de-DE");
+      html2pdf().set({
+        margin: 0.5,
+        filename: 'Audit_Q-Checkliste.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'cm', format: 'a4', orientation: 'landscape' }
+      }).from(document.getElementById("audit-content")).save();
+    }
+
+    buildTable();
+    updateScore();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => console.log("SW registriert", reg.scope))
+          .catch(err => console.error("SW Fehler", err));
+      });
+    }
+  </script>
+</body>
+</html>
