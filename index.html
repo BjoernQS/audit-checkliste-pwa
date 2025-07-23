@@ -18,26 +18,117 @@
         margin: 20px;
         background: #f5f5f5;
     }
-    /* ... Hier würde man alle CSS-Teile aus dem Originalcode einfügen ... */
+    /* Platzhalter – vollständiges CSS im Original einfügen */
   </style>
 </head>
 <body>
   <div id="audit-content">
-    <!-- ... Hier wird der ganze HTML-Inhalt aus dem ursprünglichen Body eingefügt ... -->
+    <header>
+      <h1>Audit Checkliste – Q-Prüfer Lengsfeld</h1>
+      <div class="date-stamp" id="dateStamp"></div>
+    </header>
+
+    <div class="button-container">
+      <button onclick="generatePDF()">📄 PDF erstellen</button>
+    </div>
+
+    <div id="auditBody"></div>
+
+    <div class="summary">
+      <h2>Auswertung</h2>
+      <p><strong>Gesamtpunktzahl:</strong> <span id="score">0</span></p>
+      <p><strong>Anzahl 0 (Rot):</strong> <span id="count0">0</span></p>
+      <p><strong>Anzahl 1 (Gelb):</strong> <span id="count1">0</span></p>
+      <p><strong>Anzahl 2 (Grün):</strong> <span id="count2">0</span></p>
+    </div>
   </div>
 
   <script>
-    // ... Hier kommt der vollständige JS-Code aus der ursprünglichen HTML-Datei ...
+    const fragen = [
+      ["Dokumentation", "Sind die Arbeitsanweisungen vollständig, aktuell, verständlich und an der Linie verfügbar?"],
+      ["Prozessüberwachung", "Werden Maschinenparameter gemäß Freigabe-/Bemusterungsunterlagen festgelegt, freigegeben und dokumentiert?"],
+      ["Prozessüberwachung", "Werden relevante Prozessparameter systematisch überwacht und ausgewertet?"]
+    ];
+
+    function buildTable() {
+      const auditBody = document.getElementById("auditBody");
+      const table = document.createElement("table");
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Kategorie</th>
+            <th>Frage</th>
+            <th>Bewertung</th>
+            <th>Kommentar</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${fragen.map(f => `
+            <tr>
+              <td>${f[0]}</td>
+              <td>${f[1]}</td>
+              <td>
+                <select>
+                  <option value="0">0</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                </select>
+              </td>
+              <td><div contenteditable="true" style="min-height:80px; border:1px solid #ccc;"></div></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      `;
+      auditBody.appendChild(table);
+
+      document.querySelectorAll("select").forEach(sel =>
+        sel.addEventListener("change", updateScore)
+      );
+    }
+
+    function updateScore() {
+      const selects = document.querySelectorAll("select");
+      let sum = 0, c0 = 0, c1 = 0, c2 = 0;
+      selects.forEach(s => {
+        const val = +s.value;
+        sum += val;
+        if (val === 0) c0++;
+        else if (val === 1) c1++;
+        else if (val === 2) c2++;
+      });
+      document.getElementById("score").textContent = sum;
+      document.getElementById("count0").textContent = c0;
+      document.getElementById("count1").textContent = c1;
+      document.getElementById("count2").textContent = c2;
+    }
+
+    function generatePDF() {
+      const now = new Date();
+      const formattedDate = now.toLocaleDateString('de-DE');
+      document.getElementById("dateStamp").textContent = `Erstellt am: ${formattedDate}`;
+
+      const element = document.getElementById('audit-content');
+      const opt = {
+        margin: 0.5,
+        filename: 'Audit_Q-Checkliste.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'cm', format: 'a4', orientation: 'landscape' }
+      };
+      html2pdf().set(opt).from(element).save();
+    }
+
+    buildTable();
   </script>
 
   <script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function () {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(reg => console.log('✅ Service Worker registriert:', reg.scope))
-        .catch(err => console.error('⚠️ Fehler beim Registrieren:', err));
-    });
-  }
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => console.log('✅ Service Worker registriert:', reg.scope))
+          .catch(err => console.error('⚠️ Fehler beim Registrieren:', err));
+      });
+    }
   </script>
 </body>
 </html>
